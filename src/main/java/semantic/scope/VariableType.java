@@ -1,0 +1,18 @@
+package semantic.scope;
+
+public enum VariableType {
+
+    INT,
+
+    CHAR,
+
+    ARRAY_INT,
+
+    ARRAY_CHAR,
+
+    VOID
+
+    //?????????????????
+
+
+}
