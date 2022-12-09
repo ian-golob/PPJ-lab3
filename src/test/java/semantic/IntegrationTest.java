@@ -31,7 +31,7 @@ public class IntegrationTest {
 
             SemantickiAnalizator sa = new SemantickiAnalizator();
 
-            sa.analyzeInput(input, output);
+            sa.analyzeInput(input, output, System.err);
         }
 
         String myOutput = Files.readString(Path.of(myFileName));

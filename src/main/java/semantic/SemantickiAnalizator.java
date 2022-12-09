@@ -13,13 +13,19 @@ public class SemantickiAnalizator {
 
     private final ProductionChecker checker;
 
+    public static void main(String[] args) {
+        SemantickiAnalizator sa = new SemantickiAnalizator();
+
+        sa.analyzeInput(System.in, System.out, System.err);
+    }
+
     public SemantickiAnalizator(){
         scopeController = new ScopeController();
         checker = new ProductionChecker(scopeController);
 
     }
 
-    public void analyzeInput(InputStream input, PrintStream output) {
+    public void analyzeInput(InputStream in, PrintStream out, PrintStream err) {
 
         //parseInput(input)
 
