@@ -1,7 +1,7 @@
-package semantic.scope.function;
+package semantic.model.function;
 
 import semantic.SemanticException;
-import semantic.scope.type.DataType;
+import semantic.model.type.DataType;
 
 import java.util.ArrayList;
 import java.util.List;

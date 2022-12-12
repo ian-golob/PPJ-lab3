@@ -1,4 +1,4 @@
-package semantic.scope.type;
+package semantic.model.type;
 
 import semantic.SemanticException;
 

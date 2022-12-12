@@ -2,11 +2,11 @@ package semantic.semantic.scope.function;
 
 import org.junit.jupiter.api.Test;
 import semantic.SemanticException;
-import semantic.scope.function.Function;
+import semantic.model.function.Function;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static semantic.scope.type.DataType.*;
-import static semantic.scope.type.NumericType.*;
+import static semantic.model.type.DataType.*;
+import static semantic.model.type.NumericType.*;
 
 public class FunctionTest {
 

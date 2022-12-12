@@ -1,4 +1,4 @@
-package semantic.scope.type;
+package semantic.model.util;
 
 public class ConstantUtil {
     //TODO

@@ -1,8 +1,8 @@
 package semantic.scope;
 
 import semantic.SemanticException;
-import semantic.scope.function.Function;
-import semantic.scope.variable.Variable;
+import semantic.model.function.Function;
+import semantic.model.variable.Variable;
 
 import java.util.HashMap;
 import java.util.Map;

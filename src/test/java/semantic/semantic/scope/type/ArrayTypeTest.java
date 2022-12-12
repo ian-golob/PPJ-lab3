@@ -3,10 +3,10 @@ package semantic.semantic.scope.type;
 
 import org.junit.jupiter.api.Test;
 import semantic.SemanticException;
-import semantic.scope.type.ArrayType;
+import semantic.model.type.ArrayType;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static semantic.scope.type.NumericType.*;
+import static semantic.model.type.NumericType.*;
 
 public class ArrayTypeTest {
 

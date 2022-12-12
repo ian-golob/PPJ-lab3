@@ -1,7 +1,7 @@
-package semantic.scope.variable;
+package semantic.model.variable;
 
 import semantic.SemanticException;
-import semantic.scope.type.DataType;
+import semantic.model.type.DataType;
 
 import java.util.Objects;
 
