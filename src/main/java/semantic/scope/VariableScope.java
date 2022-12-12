@@ -1,6 +1,7 @@
 package semantic.scope;
 
 import semantic.SemanticException;
+import semantic.scope.variable.Variable;
 
 public interface VariableScope {
 

@@ -1,4 +1,7 @@
-package semantic.scope;
+package semantic.scope.variable;
+
+import semantic.SemanticException;
+import semantic.scope.type.DataType;
 
 import java.util.Objects;
 
@@ -6,16 +9,21 @@ public class Variable {
 
     private final String name;
 
-    private final VariableType type;
+    private final DataType type;
 
     private final boolean isConst;
 
     private final boolean isArray;
 
 
-    public Variable(String name, VariableType type, boolean isConst, boolean isArray) {
+    public Variable(String name, DataType type, boolean isConst, boolean isArray) throws SemanticException {
         this.name = Objects.requireNonNull(name);
+
+        if(type == DataType.VOID){
+            throw new SemanticException();
+        }
         this.type = Objects.requireNonNull(type);
+
         this.isConst = isConst;
         this.isArray = isArray;
     }
@@ -24,7 +32,7 @@ public class Variable {
         return name;
     }
 
-    public VariableType getType() {
+    public DataType getType() {
         return type;
     }
 

@@ -2,6 +2,7 @@ package semantic;
 
 import semantic.checker.ProductionChecker;
 import semantic.scope.ScopeController;
+import semantic.tree.Node;
 
 import java.io.InputStream;
 import java.io.PrintStream;
@@ -21,15 +22,14 @@ public class SemantickiAnalizator {
 
     public SemantickiAnalizator(){
         scopeController = new ScopeController();
-        checker = new ProductionChecker(scopeController);
-
+        checker = new ProductionChecker(scopeController, System.out);
     }
 
     public void analyzeInput(InputStream in, PrintStream out, PrintStream err) {
 
-        //parseInput(input)
+        Node root = null;
+        //root = parseInput(input);
 
-        //checkTree(output)
-
+        checker.check(root);
     }
 }

@@ -3,6 +3,7 @@ package semantic.checker;
 import semantic.scope.ScopeController;
 import semantic.tree.Node;
 
+import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,8 +14,11 @@ public class ProductionChecker {
 
     private final Map<String, Map<List<String>, Rule>> rules = new HashMap<>();
 
+    private final PrintStream out;
 
-    public ProductionChecker(ScopeController scopeController) {
+
+    public ProductionChecker(ScopeController scopeController, PrintStream output) {
+        this.out = output;
         this.scope = scopeController;
     }
 

@@ -1,6 +1,8 @@
 package semantic.scope;
 
 import semantic.SemanticException;
+import semantic.scope.function.Function;
+import semantic.scope.variable.Variable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -53,12 +55,11 @@ public class ScopeController {
         }
 
         if(declaredFunctions.containsKey(function.getName())){
-            //TODO check if function signatures match
-            /*
-            if(signatures do not match){
+            Function declaredFunction = declaredFunctions.get(function.getName());
+
+            if(!declaredFunction.matchesSignatureOf(function)){
                 throw new SemanticException("Function declaration and definition signatures do not match.");
             }
-             */
         }
 
         declaredFunctions.put(function.getName(), function);
