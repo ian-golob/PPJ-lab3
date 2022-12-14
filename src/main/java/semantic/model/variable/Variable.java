@@ -2,6 +2,7 @@ package semantic.model.variable;
 
 import semantic.SemanticException;
 import semantic.model.type.DataType;
+import semantic.model.type.NumericType;
 
 import java.util.Objects;
 
@@ -42,5 +43,9 @@ public class Variable {
 
     public boolean isArray() {
         return isArray;
+    }
+
+    public boolean isLValue(){
+        return type == NumericType.CHAR || type == NumericType.INT;
     }
 }

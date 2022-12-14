@@ -11,6 +11,7 @@ import static semantic.model.type.NumericType.*;
 public class FunctionTest {
 
 
+    /*
     @Test
     public void matchesSignatureTest() throws SemanticException {
         assertTrue(new Function("ime").matchesSignatureOf(new Function("ime")));
@@ -26,5 +27,7 @@ public class FunctionTest {
 
         assertThrows(SemanticException.class, () -> new Function("ime", VOID, INT, VOID));
     }
+
+     */
 
 }

@@ -15,6 +15,8 @@ public class ScopeController {
 
     private final Map<String, Function> declaredFunctions = new HashMap<>();
 
+    private Function currentFunction;
+
     public ScopeController(){
         currentVariableScope = new GlobalVariableScope();
     }
@@ -41,12 +43,32 @@ public class ScopeController {
         return variable != null;
     }
 
+    public void requireDeclaredVariable(String variableName) throws SemanticException{
+        if(!variableIsDeclared(variableName)){
+            throw new SemanticException("Variable not declared");
+        }
+    }
+
     public void declareFunction(Function function) throws SemanticException {
         if(declaredFunctions.containsKey(function.getName())){
             throw new SemanticException("Function already declared.");
         }
 
         declaredFunctions.put(function.getName(), function);
+    }
+
+    public void startFunctionDeclaration(Function function) throws SemanticException {
+        declareFunction(function);
+
+        currentFunction = function;
+    }
+
+    public void endFunctionDeclaration() {
+        currentFunction = null;
+    }
+
+    public Function getCurrentFunction() {
+        return currentFunction;
     }
 
     public void defineFunction(Function function) throws SemanticException {
@@ -66,8 +88,12 @@ public class ScopeController {
         definedFunctions.put(function.getName(), function);
     }
 
-    public void getFunction(String functionName) throws SemanticException {
-        definedFunctions.get(functionName);
+    public Function getDefinedFunction(String functionName) {
+        return definedFunctions.get(functionName);
+    }
+
+    public Function getDeclaredFunction(String functionName) {
+        return definedFunctions.get(functionName);
     }
 
 }

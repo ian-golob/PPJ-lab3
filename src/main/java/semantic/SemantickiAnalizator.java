@@ -1,6 +1,5 @@
 package semantic;
 
-import com.sun.source.tree.Tree;
 import semantic.checker.ProductionChecker;
 import semantic.scope.ScopeController;
 import semantic.tree.Leaf;
@@ -19,16 +18,24 @@ public class SemantickiAnalizator {
 
     private final ProductionChecker checker;
 
-    public static void main(String[] args) {
-        SemantickiAnalizator sa = new SemantickiAnalizator();
+    private final InputStream in;
 
-        sa.analyzeInput(System.in, System.out, System.err);
-    }
+    private final PrintStream out;
 
-    public SemantickiAnalizator(){
+    public SemantickiAnalizator(InputStream in, PrintStream out) {
+        this.in = in;
+        this.out = out;
+
         scopeController = new ScopeController();
-        checker = new ProductionChecker(scopeController, System.out);
+        checker = new ProductionChecker(scopeController, out);
     }
+
+    public static void main(String[] args) {
+        SemantickiAnalizator sa = new SemantickiAnalizator(System.in, System.out);
+
+        sa.analyzeInput();
+    }
+
 
     private int calcDepth(String s){
         int i;
@@ -87,12 +94,13 @@ public class SemantickiAnalizator {
         return root;
     }
 
-    public void analyzeInput(InputStream in, PrintStream out, PrintStream err) {
+    public void analyzeInput() {
+
 
         Node root = parseInput(in);
-        printTree(out, root);
+        //printTree(out, root);
 
-        checker.check(root);
+        checker.checkRoot(root);
     }
 
 

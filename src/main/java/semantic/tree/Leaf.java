@@ -26,4 +26,9 @@ public class Leaf extends TreeElement{
         this.sourceText = sourceText;
         isLeaf = true;
     }
+
+    @Override
+    public String toString() {
+        return getName() + "(" + lineNumber + "," + sourceText +")";
+    }
 }

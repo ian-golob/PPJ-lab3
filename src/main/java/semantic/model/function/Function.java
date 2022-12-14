@@ -2,6 +2,7 @@ package semantic.model.function;
 
 import semantic.SemanticException;
 import semantic.model.type.DataType;
+import semantic.model.type.FunctionType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,23 +15,23 @@ public class Function {
 
     private final List<DataType> parameters;
 
+    private final FunctionType functionType;
+
     private final boolean voidParameters;
 
-    public Function(String name) throws SemanticException {
-        this(name, DataType.VOID, DataType.VOID);
-    }
+    public Function(String name, FunctionType functionType) throws SemanticException {
 
-    public Function(String name, DataType returnType) throws SemanticException {
-        this(name, returnType, DataType.VOID);
-    }
+        this.functionType = functionType;
 
-    public Function(String name, DataType returnType, DataType... parameters) throws SemanticException {
+        DataType returnType = functionType.getReturnType();
+        List<DataType> parameters = functionType.getParameters();
+
         this.name = name;
         this.returnType = returnType;
         this.parameters = new ArrayList<>();
 
-        if(parameters.length == 0 ||
-                parameters.length == 1 && parameters[0] == DataType.VOID){
+        if(parameters.size() == 0 ||
+                parameters.size() == 1 && parameters.get(0) == DataType.VOID){
             voidParameters = true;
 
         } else {
@@ -54,6 +55,10 @@ public class Function {
         return returnType;
     }
 
+    public FunctionType getFunctionType() {
+        return functionType;
+    }
+
     public List<DataType> getParameters() {
         return parameters;
     }
@@ -63,11 +68,6 @@ public class Function {
     }
 
     public boolean matchesSignatureOf(Function other){
-
-        // check function name
-        if(!this.name.equals(other.name)){
-            return false;
-        }
 
         // check return type
         if(this.returnType != other.returnType){

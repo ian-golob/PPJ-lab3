@@ -103,4 +103,13 @@ public abstract class NumericType extends DataType{
         return baseNumericType;
     }
 
+
+    public static boolean isConst(DataType type){
+        if(!(type instanceof NumericType)){
+            return false;
+        }
+
+        return ((NumericType) type).isConst();
+    }
+
 }

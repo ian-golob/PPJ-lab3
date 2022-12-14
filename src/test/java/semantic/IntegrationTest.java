@@ -17,7 +17,7 @@ public class IntegrationTest {
 
     @ParameterizedTest
     @MethodSource("provideNewTestDirectoryNames")
-    public void integrationTest(String directoryName) throws IOException, ClassNotFoundException {
+    public void integrationTest(String directoryName) throws IOException {
         String pathPrefix = "./src/test/resources/" + directoryName;
 
         String inFileName = pathPrefix + "/test.in";
@@ -29,9 +29,9 @@ public class IntegrationTest {
         try(InputStream input = new FileInputStream(inFileName);
             PrintStream output = new PrintStream(new FileOutputStream(myFileName))){
 
-            SemantickiAnalizator sa = new SemantickiAnalizator();
+            SemantickiAnalizator sa = new SemantickiAnalizator(input, output);
 
-            sa.analyzeInput(input, output, System.err);
+            sa.analyzeInput();
         }
 
         String myOutput = Files.readString(Path.of(myFileName));
