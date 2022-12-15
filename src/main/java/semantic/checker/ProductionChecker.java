@@ -10,6 +10,7 @@ import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class ProductionChecker {
 
@@ -39,7 +40,7 @@ public class ProductionChecker {
 
     public void check(Node node){
 
-        List<String> childrenNames = node.getChildren().stream().map(TreeElement::getName).toList();
+        List<String> childrenNames = node.getChildren().stream().map(TreeElement::getName).collect(Collectors.toList());
         Rule rule = getRule(node.getName(), childrenNames);
 
 

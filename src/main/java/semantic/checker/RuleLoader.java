@@ -6,16 +6,20 @@ import semantic.model.type.ArrayType;
 import semantic.model.type.DataType;
 import semantic.model.type.FunctionType;
 import semantic.model.type.NumericType;
+import semantic.model.util.TreeUtil;
 import semantic.model.variable.Variable;
 import semantic.tree.Leaf;
 import semantic.tree.Node;
 
+import javax.xml.crypto.Data;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static semantic.model.type.NumericType.*;
-import static semantic.model.util.ConstantUtil.requireIntValue;
+import static semantic.model.type.ArrayType.*;
+import static semantic.model.util.ConstantUtil.*;
 
 public class RuleLoader {
 
@@ -63,7 +67,27 @@ public class RuleLoader {
             node.setProperty("l-izraz", Boolean.FALSE);
         });
 
-        // TODO: continue for <primarni_izraz>
+        addRule("<primarni_izraz>", List.of(
+                "ZNAK"
+        ), (node, checker, scope) -> {
+            Leaf ZNAK = (Leaf) node.getChild(0);
+
+            requireValidChar(ZNAK.getSourceText());
+
+            node.setProperty("tip", CHAR);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<primarni_izraz>", List.of(
+                "NIZ_ZNAKOVA"
+        ), (node, checker, scope) -> {
+            Leaf NIZ_ZNAKOVA = (Leaf) node.getChild(0);
+
+            requireValidString(NIZ_ZNAKOVA.getSourceText());
+
+            node.setProperty("tip", ArrayType.of(CHAR));
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         addRule("<primarni_izraz>", List.of(
                 "L_ZAGRADA",
@@ -134,8 +158,91 @@ public class RuleLoader {
             node.setProperty("l-izraz", Boolean.FALSE);
         });
 
-        //TODO nastavi
+        addRule("<postfiks_izraz>", List.of(
+                "<postfiks_izraz>",
+                "L_ZAGRADA",
+                "<lista_argumenata>",
+                "D_ZAGRADA"
+        ), (node, checker, scope) -> {
 
+            Node postfiks_izraz = (Node) node.getChild(0);
+            Node lista_argumenata = (Node) node.getChild(2);
+
+            checker.check(postfiks_izraz);
+            checker.check(lista_argumenata);
+
+            FunctionType functionType = (FunctionType) postfiks_izraz.getProperty("tip");
+
+            if (functionType.getParameters().size() != ((List<DataType>) lista_argumenata.getProperty("tipovi")).size()) throw new SemanticException();
+            for (int i = 0; i < functionType.getParameters().size(); i++){
+                if (!functionType.getParameters().get(i).implicitlyCastableTo(((List<DataType>) lista_argumenata.getProperty("tipovi")).get(i))) throw new SemanticException();
+            }
+
+            node.setProperty("tip", functionType.getReturnType());
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<postfiks_izraz>", List.of(
+                "<postfiks_izraz>",
+                "OP_INC"
+        ), (node, checker, scope) -> {
+
+            Node postfiks_izraz = (Node) node.getChild(0);
+            checker.check(postfiks_izraz);
+
+            if (!(Boolean) postfiks_izraz.getProperty("l-izraz").equals(Boolean.TRUE)) throw new SemanticException();
+            if ((DataType) postfiks_izraz.getProperty("tip") != INT) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<postfiks_izraz>", List.of(
+                "<postfiks_izraz>",
+                "OP_DEC"
+        ), (node, checker, scope) -> {
+
+            Node postfiks_izraz = (Node) node.getChild(0);
+            checker.check(postfiks_izraz);
+
+            if (!(Boolean) postfiks_izraz.getProperty("l-izraz").equals(Boolean.TRUE)) throw new SemanticException();
+            if ((DataType) postfiks_izraz.getProperty("tip") != INT) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        // <lista_argumenata>
+
+        addRule("<lista_argumenata>", List.of(
+            "<izraz_pridruzivanja>"
+        ), (node, checker, scoper) -> {
+            Node izraz_pridruzivanja = (Node) node.getChild(0);
+            checker.check(izraz_pridruzivanja);
+
+            List<DataType> tipovi = List.of((DataType) izraz_pridruzivanja.getProperty("tip"));
+
+            node.setProperty("tipovi", tipovi);
+
+        });
+
+        addRule("<lista_argumenata>", List.of(
+                "<lista_argumenata>",
+                "ZAREZ",
+                "<izraz_pridruzivanja>"
+        ), (node, checker, scoper) -> {
+
+            Node lista_argumenata = (Node) node.getChild(0);
+            Node izraz_pridruzivanja = (Node) node.getChild(2);
+
+            checker.check(izraz_pridruzivanja);
+            checker.check(lista_argumenata);
+
+            List<DataType> tipovi = (List<DataType>) lista_argumenata.getProperty("tipovi");
+            tipovi.add((DataType) izraz_pridruzivanja.getProperty("tip"));
+
+            node.setProperty("tipovi", tipovi);
+        });
 
         // <unarni_izraz>
 
@@ -150,11 +257,75 @@ public class RuleLoader {
             node.setProperty("l-izraz", postfiks_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<unarni_izraz>", List.of(
+                "OP_INC",
+                "<unarni_izraz>"
+        ), (node, checker, scope) -> {
+            Node unarni_izraz = (Node) node.getChild(1);
+
+            checker.check(unarni_izraz);
+
+            if ((Boolean) unarni_izraz.getProperty("l-izraz").equals(Boolean.FALSE)
+                    || !((DataType) unarni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<unarni_izraz>", List.of(
+                "OP_DEC",
+                "<unarni_izraz>"
+        ), (node, checker, scope) -> {
+            Node unarni_izraz = (Node) node.getChild(1);
+
+            checker.check(unarni_izraz);
+
+            if ((Boolean) unarni_izraz.getProperty("l-izraz").equals(Boolean.FALSE)
+                    || !((DataType) unarni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<unarni_izraz>", List.of(
+                "<unarni_operator>",
+                "<cast_izraz>"
+        ), (node, checker, scope) -> {
+            Node cast_izraz = (Node) node.getChild(1);
+
+            checker.check(cast_izraz);
+
+            if (!((DataType) cast_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <unarni_operator>
 
-        //TODO nastavi
+        addRule("<unarni_operator>", List.of(
+                "PLUS"
+        ), (node, checker, scope) -> {
+
+        });
+
+        addRule("<unarni_operator>", List.of(
+                "MINUS"
+        ), (node, checker, scope) -> {
+
+        });
+
+        addRule("<unarni_operator>", List.of(
+                "OP_TILDA"
+        ), (node, checker, scope) -> {
+
+        });
+
+        addRule("<unarni_operator>", List.of(
+                "OP_NEG"
+        ), (node, checker, scope) -> {
+
+        });
 
         // <cast_izraz>
 
@@ -169,7 +340,23 @@ public class RuleLoader {
             node.setProperty("l-izraz", unarni_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<cast_izraz>", List.of(
+                "L_ZAGRADA",
+                "<ime_tipa>",
+                "D_ZAGRADA",
+                "<cast_izraz>"
+        ), (node, checker, scope) -> {
+            Node ime_tipa = (Node) node.getChild(1);
+            Node cast_izraz = (Node) node.getChild(3);
+
+            checker.check(ime_tipa);
+            checker.check(cast_izraz);
+
+            if (!((DataType) cast_izraz.getProperty("tip")).explicitlyCastableTo((DataType) ime_tipa.getProperty("tip"))) throw new SemanticException();
+
+            node.setProperty("tip", ime_tipa.getProperty("tip"));
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <ime_tipa>
 
@@ -183,7 +370,18 @@ public class RuleLoader {
             node.setProperty("tip", specifikator_tipa.getProperty("tip"));
         });
 
-        //TODO nastavi
+        addRule("<ime_tipa>", List.of(
+                "KR_CONST",
+                "<specifikator_tipa>"
+        ), (node, checker, scope) -> {
+            Node specifikator_tipa = (Node) node.getChild(1);
+
+            checker.check(specifikator_tipa);
+
+            if ((DataType) specifikator_tipa.getProperty("tip") == VOID) throw new SemanticException();
+
+            node.setProperty("tip", constOf((DataType) specifikator_tipa.getProperty("tip")));
+        });
 
 
         // <specifikator_tipa>
@@ -220,8 +418,59 @@ public class RuleLoader {
             node.setProperty("l-izraz", cast_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<multiplikativni_izraz>", List.of(
+                "<multiplikativni_izraz>",
+                "OP_PUTA",
+                "<cast_izraz>"
+        ), (node, checker, scope) -> {
+            Node multiplikativni_izraz = (Node) node.getChild(0);
+            Node cast_izraz = (Node) node.getChild(2);
 
+            checker.check(multiplikativni_izraz);
+            checker.check(cast_izraz);
+
+            if (!((DataType)multiplikativni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                !((DataType)cast_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<multiplikativni_izraz>", List.of(
+                "<multiplikativni_izraz>",
+                "OP_DIJELI",
+                "<cast_izraz>"
+        ), (node, checker, scope) -> {
+            Node multiplikativni_izraz = (Node) node.getChild(0);
+            Node cast_izraz = (Node) node.getChild(2);
+
+            checker.check(multiplikativni_izraz);
+            checker.check(cast_izraz);
+
+            if (!((DataType)multiplikativni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)cast_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<multiplikativni_izraz>", List.of(
+                "<multiplikativni_izraz>",
+                "OP_MOD",
+                "<cast_izraz>"
+        ), (node, checker, scope) -> {
+            Node multiplikativni_izraz = (Node) node.getChild(0);
+            Node cast_izraz = (Node) node.getChild(2);
+
+            checker.check(multiplikativni_izraz);
+            checker.check(cast_izraz);
+
+            if (!((DataType)multiplikativni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)cast_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <aditivni_izraz>
 
@@ -236,8 +485,41 @@ public class RuleLoader {
             node.setProperty("l-izraz", multiplikativni_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<aditivni_izraz>", List.of(
+                "<aditivni_izraz>",
+                "PLUS",
+                "<multiplikativni_izraz>"
+        ), (node, checker, scope) -> {
+            Node aditivni_izraz = (Node) node.getChild(0);
+            Node multiplikativni_izraz = (Node) node.getChild(2);
 
+            checker.check(aditivni_izraz);
+            checker.check(multiplikativni_izraz);
+
+            if (!((DataType)multiplikativni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)aditivni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<aditivni_izraz>", List.of(
+                "<aditivni_izraz>",
+                "MINUS",
+                "<multiplikativni_izraz>"
+        ), (node, checker, scope) -> {
+            Node aditivni_izraz = (Node) node.getChild(0);
+            Node multiplikativni_izraz = (Node) node.getChild(2);
+
+            checker.check(aditivni_izraz);
+            checker.check(multiplikativni_izraz);
+
+            if (!((DataType)multiplikativni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)aditivni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <odnosni_izraz>
 
@@ -252,8 +534,77 @@ public class RuleLoader {
             node.setProperty("l-izraz", aditivni_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<odnosni_izraz>", List.of(
+                "<odnosni_izraz>",
+                "OP_LT",
+                "<aditivni_izraz>"
+        ), (node, checker, scope) -> {
+            Node odnosni_izraz = (Node) node.getChild(0);
+            Node aditivni_izraz = (Node) node.getChild(2);
 
+            checker.check(odnosni_izraz);
+            checker.check(aditivni_izraz);
+
+            if (!((DataType)odnosni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)aditivni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<odnosni_izraz>", List.of(
+                "<odnosni_izraz>",
+                "OP_GT",
+                "<aditivni_izraz>"
+        ), (node, checker, scope) -> {
+            Node odnosni_izraz = (Node) node.getChild(0);
+            Node aditivni_izraz = (Node) node.getChild(2);
+
+            checker.check(odnosni_izraz);
+            checker.check(aditivni_izraz);
+
+            if (!((DataType)odnosni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)aditivni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<odnosni_izraz>", List.of(
+                "<odnosni_izraz>",
+                "OP_LTE",
+                "<aditivni_izraz>"
+        ), (node, checker, scope) -> {
+            Node odnosni_izraz = (Node) node.getChild(0);
+            Node aditivni_izraz = (Node) node.getChild(2);
+
+            checker.check(odnosni_izraz);
+            checker.check(aditivni_izraz);
+
+            if (!((DataType)odnosni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)aditivni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<odnosni_izraz>", List.of(
+                "<odnosni_izraz>",
+                "OP_GTE",
+                "<aditivni_izraz>"
+        ), (node, checker, scope) -> {
+            Node odnosni_izraz = (Node) node.getChild(0);
+            Node aditivni_izraz = (Node) node.getChild(2);
+
+            checker.check(odnosni_izraz);
+            checker.check(aditivni_izraz);
+
+            if (!((DataType)odnosni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)aditivni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <jednakosni_izraz>
 
@@ -268,8 +619,41 @@ public class RuleLoader {
             node.setProperty("l-izraz", odnosni_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<jednakosni_izraz>", List.of(
+                "<jednakosni_izraz>",
+                "OP_EQ",
+                "<odnosni_izraz>"
+        ), (node, checker, scope) -> {
+            Node jednakosni_izraz = (Node) node.getChild(0);
+            Node odnosni_izraz = (Node) node.getChild(2);
 
+            checker.check(jednakosni_izraz);
+            checker.check(odnosni_izraz);
+
+            if (!((DataType)odnosni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)jednakosni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
+
+        addRule("<jednakosni_izraz>", List.of(
+                "<jednakosni_izraz>",
+                "OP_NEQ",
+                "<odnosni_izraz>"
+        ), (node, checker, scope) -> {
+            Node jednakosni_izraz = (Node) node.getChild(0);
+            Node odnosni_izraz = (Node) node.getChild(2);
+
+            checker.check(jednakosni_izraz);
+            checker.check(odnosni_izraz);
+
+            if (!((DataType)odnosni_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)jednakosni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <bin_i_izraz>
 
@@ -284,9 +668,23 @@ public class RuleLoader {
             node.setProperty("l-izraz", jednakosni_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<bin_i_izraz>", List.of(
+                "<bin_i_izraz>",
+                "OP_BIN_I",
+                "<jednakosni_izraz>"
+        ), (node, checker, scope) -> {
+            Node bin_i_izraz = (Node) node.getChild(0);
+            Node jednakosni_izraz = (Node) node.getChild(2);
 
+            checker.check(bin_i_izraz);
+            checker.check(jednakosni_izraz);
 
+            if (!((DataType)bin_i_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)jednakosni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <bin_xili_izraz>
 
@@ -301,8 +699,23 @@ public class RuleLoader {
             node.setProperty("l-izraz", bin_i_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<bin_xili_izraz>", List.of(
+                "<bin_xili_izraz>",
+                "OP_BIN_XILI",
+                "<bin_i_izraz>"
+        ), (node, checker, scope) -> {
+            Node bin_xili_izraz = (Node) node.getChild(0);
+            Node bin_i_izraz = (Node) node.getChild(2);
 
+            checker.check(bin_i_izraz);
+            checker.check(bin_xili_izraz);
+
+            if (!((DataType)bin_i_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)bin_xili_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <bin_ili_izraz>
 
@@ -317,9 +730,23 @@ public class RuleLoader {
             node.setProperty("l-izraz", bin_xili_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<bin_ili_izraz>", List.of(
+                "<bin_ili_izraz>",
+                "OP_BIN_ILI",
+                "<bin_xili_izraz>"
+        ), (node, checker, scope) -> {
+            Node bin_ili_izraz = (Node) node.getChild(0);
+            Node bin_xili_izraz = (Node) node.getChild(2);
 
+            checker.check(bin_ili_izraz);
+            checker.check(bin_xili_izraz);
 
+            if (!((DataType)bin_ili_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)bin_xili_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <log_i_izraz>
 
@@ -334,9 +761,23 @@ public class RuleLoader {
             node.setProperty("l-izraz", bin_ili_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<log_i_izraz>", List.of(
+                "<log_i_izraz>",
+                "OP_I",
+                "<bin_ili_izraz>"
+        ), (node, checker, scope) -> {
+            Node log_i_izraz = (Node) node.getChild(0);
+            Node bin_ili_izraz = (Node) node.getChild(2);
 
+            checker.check(log_i_izraz);
+            checker.check(bin_ili_izraz);
 
+            if (!((DataType)log_i_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)bin_ili_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <log_ili_izraz>
 
@@ -351,8 +792,23 @@ public class RuleLoader {
             node.setProperty("l-izraz", log_i_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<log_ili_izraz>", List.of(
+                "<log_ili_izraz>",
+                "OP_ILI",
+                "<log_i_izraz>"
+        ), (node, checker, scope) -> {
+            Node log_ili_izraz = (Node) node.getChild(0);
+            Node log_i_izraz = (Node) node.getChild(2);
 
+            checker.check(log_ili_izraz);
+            checker.check(log_i_izraz);
+
+            if (!((DataType)log_i_izraz.getProperty("tip")).implicitlyCastableTo(INT) ||
+                    !((DataType)log_ili_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+
+            node.setProperty("tip", INT);
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <izraz_pridruzivanja>
 
@@ -367,8 +823,24 @@ public class RuleLoader {
             node.setProperty("l-izraz", log_ili_izraz.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<izraz_pridruzivanja>", List.of(
+                "<postfiks_izraz>",
+                "OP_PRIDRUZI",
+                "<izraz_pridruzivanja>"
+        ), (node, checker, scope) -> {
+            Node postfiks_izraz = (Node) node.getChild(0);
+            Node izraz_pridruzivanja = (Node) node.getChild(2);
 
+            checker.check(postfiks_izraz);
+            checker.check(izraz_pridruzivanja);
+
+            if (!((Boolean)postfiks_izraz.getProperty("l-izraz")).equals(Boolean.TRUE) ||
+                    !((DataType)izraz_pridruzivanja.getProperty("tip"))
+                            .implicitlyCastableTo((DataType)postfiks_izraz.getProperty("tip"))) throw new SemanticException();
+
+            node.setProperty("tip", postfiks_izraz.getProperty("tip"));
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <izraz>
 
@@ -383,9 +855,20 @@ public class RuleLoader {
             node.setProperty("l-izraz", izraz_pridruzivanja.getProperty("l-izraz"));
         });
 
-        //TODO nastavi
+        addRule("<izraz>", List.of(
+                "<izraz>",
+                "ZAREZ",
+                "<izraz_pridruzivanja>"
+        ), (node, checker, scope) -> {
+            Node izraz = (Node) node.getChild(0);
+            Node izraz_pridruzivanja = (Node) node.getChild(2);
 
+            checker.check(izraz);
+            checker.check(izraz_pridruzivanja);
 
+            node.setProperty("tip", izraz_pridruzivanja.getProperty("tip"));
+            node.setProperty("l-izraz", Boolean.FALSE);
+        });
 
         // <slozena_naredba>
 
@@ -397,10 +880,20 @@ public class RuleLoader {
             Node lista_naredbi = (Node) node.getChild(1);
 
             checker.check(lista_naredbi);
-          });
+        });
 
-        //TODO nastavi
+        addRule("<slozena_naredba>", List.of(
+                "L_VIT_ZAGRADA",
+                "<lista_deklaracija>",
+                "<lista_naredbi>",
+                "D_VIT_ZAGRADA"
+        ), (node, checker, scope) -> {
+            Node lista_deklaracija = (Node) node.getChild(1);
+            Node lista_naredbi = (Node) node.getChild(2);
 
+            checker.check(lista_deklaracija);
+            checker.check(lista_naredbi);
+        });
 
         // <lista_naredbi>
 
@@ -412,9 +905,16 @@ public class RuleLoader {
             checker.check(naredba);
          });
 
-        //TODO nastavi
+        addRule("<lista_naredbi>", List.of(
+                "<lista_naredbi>",
+                "<naredba>"
+        ), (node, checker, scope) -> {
+            Node lista_naredbi = (Node) node.getChild(0);
+            Node naredba = (Node) node.getChild(1);
 
-
+            checker.check(lista_naredbi);
+            checker.check(naredba);
+        });
 
         // <naredba>
 
@@ -458,29 +958,154 @@ public class RuleLoader {
             checker.check(naredba_skoka);
         });
 
-
         // <izraz_naredba>
 
-        //TODO nastavi
+        addRule("<izraz_naredba>", List.of(
+                "TOCKAZAREZ"
+        ), (node, checker, scope) -> {
+            node.setProperty("tip", INT);
+        });
 
+        addRule("<izraz_naredba>", List.of(
+                "<izraz>",
+                "TOCKAZAREZ"
+        ), (node, checker, scope) -> {
+            Node izraz = (Node) node.getChild(0);
+
+            checker.check(izraz);
+
+            node.setProperty("tip", izraz.getProperty("tip"));
+        });
 
         // <naredba_grananja>
 
-        //TODO nastavi
+        addRule("<naredba_grananja>", List.of(
+                "KR_IF",
+                "L_ZAGRADA",
+                "<izraz>",
+                "D_ZAGRADA",
+                "<naredba>"
+        ), (node, checker, scope) -> {
+            Node izraz = (Node) node.getChild(2);
+            Node naredba = (Node) node.getChild(4);
 
+            checker.check(izraz);
+            checker.check(naredba);
+
+            if (!((DataType) izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+        });
+
+        addRule("<naredba_grananja>", List.of(
+                "KR_IF",
+                "L_ZAGRADA",
+                "<izraz>",
+                "D_ZAGRADA",
+                "<naredba>",
+                "KR_ELSE",
+                "<naredba>"
+        ), (node, checker, scope) -> {
+            Node izraz = (Node) node.getChild(2);
+            Node naredba1 = (Node) node.getChild(4);
+            Node naredba2 = (Node) node.getChild(6);
+
+            checker.check(izraz);
+            checker.check(naredba1);
+            checker.check(naredba2);
+
+            if (!((DataType) izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+        });
 
         // <naredba_petlje>
 
-        //TODO nastavi
+        addRule("<naredba_petlje>", List.of(
+                "KR_WHILE",
+                "L_ZAGRADA",
+                "<izraz>",
+                "D_ZAGRADA",
+                "<naredba>"
+        ), (node, checker, scope) -> {
+            Node izraz = (Node) node.getChild(2);
+            Node naredba = (Node) node.getChild(4);
 
+            checker.check(izraz);
 
-        // <naredba_petlje>
+            scope.enterLoop();
+            checker.check(naredba);
+            scope.exitLoop();
 
-        //TODO nastavi
+            if (!((DataType) izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+        });
+
+        addRule("<naredba_petlje>", List.of(
+                "KR_FOR",
+                "L_ZAGRADA",
+                "<izraz_naredba>",
+                "<izraz_naredba>",
+                "D_ZAGRADA",
+                "<naredba>"
+        ), (node, checker, scope) -> {
+            Node izraz_naredba1 = (Node) node.getChild(2);
+            Node izraz_naredba2 = (Node) node.getChild(3);
+            Node naredba = (Node) node.getChild(5);
+
+            checker.check(izraz_naredba1);
+            checker.check(izraz_naredba2);
+
+            scope.enterLoop();
+            checker.check(naredba);
+            scope.exitLoop();
+
+            if (!((DataType) izraz_naredba2.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+        });
+
+        addRule("<naredba_petlje>", List.of(
+                "KR_FOR",
+                "L_ZAGRADA",
+                "<izraz_naredba>",
+                "<izraz_naredba>",
+                "<izraz>",
+                "D_ZAGRADA",
+                "<naredba>"
+        ), (node, checker, scope) -> {
+            Node izraz_naredba1 = (Node) node.getChild(2);
+            Node izraz_naredba2 = (Node) node.getChild(3);
+            Node izraz = (Node) node.getChild(4);
+            Node naredba = (Node) node.getChild(6);
+
+            checker.check(izraz_naredba1);
+            checker.check(izraz_naredba2);
+            checker.check(izraz);
+
+            scope.enterLoop();
+            checker.check(naredba);
+            scope.exitLoop();
+
+            if (!((DataType) izraz_naredba2.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
+        });
 
         // <naredba_skoka>
 
-        //TODO nastavi
+        addRule("<naredba_skoka>", List.of(
+                "KR_CONTINUE",
+                "TOCKAZAREZ"
+        ), (node, checker, scope) -> {
+            if (!scope.inLoop()) throw new SemanticException();
+        });
+
+        addRule("<naredba_skoka>", List.of(
+                "KR_BREAK",
+                "TOCKAZAREZ"
+        ), (node, checker, scope) -> {
+            if (!scope.inLoop()) throw new SemanticException();
+        });
+
+        addRule("<naredba_skoka>", List.of(
+                "KR_RETURN",
+                "TOCKAZAREZ"
+        ), (node, checker, scope) -> {
+            Function currentFunction = scope.getCurrentFunction();
+            if (currentFunction.getReturnType() != VOID) throw new SemanticException();
+        });
 
         addRule("<naredba_skoka>", List.of(
                 "KR_RETURN",
@@ -498,7 +1123,6 @@ public class RuleLoader {
             }
         });
 
-
         // <prijevodna_jedinica>
 
         addRule("<prijevodna_jedinica>", List.of(
@@ -509,9 +1133,16 @@ public class RuleLoader {
             checker.check(vanjska_deklaracija);
         });
 
-        //TODO nastavi
+        addRule("<prijevodna_jedinica>", List.of(
+                "<prijevodna_jedinica>",
+                "<vanjska_deklaracija>"
+        ), (node, checker, scope) -> {
+            Node prijevodna_jedinica = (Node) node.getChild(0);
+            Node vanjska_deklaracija = (Node) node.getChild(1);
 
-
+            checker.check(prijevodna_jedinica);
+            checker.check(vanjska_deklaracija);
+        });
 
         // <vanjska_deklaracija>
 
@@ -530,8 +1161,6 @@ public class RuleLoader {
 
             checker.check(deklaracija);
         });
-
-
 
         // <definicija_funkcije>
 
@@ -558,7 +1187,8 @@ public class RuleLoader {
                 throw new SemanticException();
             }
 
-            FunctionType functionType = new FunctionType(VOID, (DataType) ime_tipa.getProperty("tip"));
+            FunctionType functionType = new FunctionType((DataType) ime_tipa.getProperty("tip"));
+
             Function declaredFunction = scope.getDeclaredFunction(IDN.getName());
             if(declaredFunction != null){
                 if(!declaredFunction.getFunctionType().equals(functionType)){
@@ -573,51 +1203,400 @@ public class RuleLoader {
             scope.endFunctionDeclaration();
         });
 
-        //TODO nastavi
+        addRule("<definicija_funkcije>", List.of(
+                "<ime_tipa>",
+                "IDN",
+                "L_ZAGRADA",
+                "<lista_parametara>",
+                "D_ZAGRADA",
+                "<slozena_naredba>"
+        ), (node, checker, scope) -> {
+            Node ime_tipa = (Node) node.getChild(0);
+            Leaf IDN = (Leaf) node.getChild(1);
+            Node lista_parametara = (Node) node.getChild(3);
+            Node slozena_naredba = (Node) node.getChild(5);
 
+            checker.check(ime_tipa);
+            checker.check(lista_parametara);
+
+            //TODO provjeri ovo nema smisla Iane pls
+            if(NumericType.isConst((DataType) ime_tipa.getProperty("tip"))){
+                throw new SemanticException();
+            }
+
+            if(scope.getDefinedFunction(IDN.getSourceText()) != null){
+                throw new SemanticException();
+            }
+
+            List<DataType> lista_tipova = (List<DataType>) lista_parametara.getProperty("tipovi");
+
+            FunctionType functionType = new FunctionType((DataType) ime_tipa.getProperty("tip"), lista_tipova.toArray(new DataType[0]));
+
+            Function declaredFunction = scope.getDeclaredFunction(IDN.getName());
+            if(declaredFunction != null){
+                if(!declaredFunction.getFunctionType().equals(functionType)){
+                    throw new SemanticException();
+                }
+            }
+
+            scope.startFunctionDeclaration(new Function(IDN.getSourceText(), functionType));
+
+            checker.check(slozena_naredba);
+
+            scope.endFunctionDeclaration();
+        });
 
         // <lista_parametara>
 
-        //TODO nastavi
+        addRule("<lista_parametara>", List.of(
+                "<deklaracija_parametra>"
+        ), (node, checker, scope) -> {
+            Node deklaracija_parametra = (Node) node.getChild(0);
 
+            checker.check(deklaracija_parametra);
+
+            List<DataType> tipovi = List.of((DataType) deklaracija_parametra.getProperty("tip"));
+            List<String> imena = List.of((String) deklaracija_parametra.getProperty("ime"));
+
+            node.setProperty("tipovi", tipovi);
+            node.setProperty("imena", imena);
+        });
+
+        addRule("<lista_parametara>", List.of(
+                "<lista_parametara>",
+                "ZAREZ",
+                "<deklaracija_parametra>"
+        ), (node, checker, scope) -> {
+            Node lista_parametara = (Node) node.getChild(0);
+            Node deklaracija_parametra = (Node) node.getChild(2);
+
+            checker.check(lista_parametara);
+            checker.check(deklaracija_parametra);
+
+            List<DataType> tipovi = (List<DataType>) lista_parametara.getProperty("tipovi");
+            tipovi.add((DataType) deklaracija_parametra.getProperty("tip"));
+            List<String> imena = (List<String>) lista_parametara.getProperty("imena");
+            imena.add((String) deklaracija_parametra.getProperty("ime"));
+
+            for (int i = 0; i < imena.size()-1; i++) if (imena.get(i).equals(imena.get(imena.size()-1))) throw new SemanticException();
+
+            node.setProperty("tipovi", tipovi);
+            node.setProperty("imena", imena);
+        });
 
         // <deklaracija_parametra>
 
-        //TODO nastavi
+        addRule("<deklaracija_parametra>", List.of(
+                "<ime_tipa>",
+                "IDN"
+        ), (node, checker, scope) -> {
+            Node ime_tipa = (Node) node.getChild(0);
+            Leaf idn = (Leaf) node.getChild(1);
 
+            checker.check(ime_tipa);
+
+            if ((DataType) ime_tipa.getProperty("tip") == VOID) throw new SemanticException();
+
+            node.setProperty("tip", ime_tipa.getProperty("tip"));
+            node.setProperty("ime", idn.getSourceText());
+        });
+
+        addRule("<deklaracija_parametra>", List.of(
+                "<ime_tipa>",
+                "IDN",
+                "L_UGL_ZAGRADA",
+                "D_UGL_ZAGRADA"
+        ), (node, checker, scope) -> {
+            Node ime_tipa = (Node) node.getChild(0);
+            Leaf idn = (Leaf) node.getChild(1);
+
+            checker.check(ime_tipa);
+
+            if ((DataType) ime_tipa.getProperty("tip") == VOID) throw new SemanticException();
+
+            node.setProperty("tip", ArrayType.of((DataType) ime_tipa.getProperty("tip")));
+            node.setProperty("ime", idn.getSourceText());
+        });
 
         // <lista_deklaracija>
 
-        //TODO nastavi
+        addRule("<lista_deklaracija>", List.of(
+                "<deklaracija>"
+        ), (node, checker, scope) -> {
+            Node deklaracija = (Node) node.getChild(0);
 
+            checker.check(deklaracija);
+        });
+
+        addRule("<lista_deklaracija>", List.of(
+                "<lista_deklaracija>",
+                "<deklaracija>"
+        ), (node, checker, scope) -> {
+            Node lista_deklaracija = (Node) node.getChild(0);
+            Node deklaracija = (Node) node.getChild(1);
+
+            checker.check(lista_deklaracija);
+            checker.check(deklaracija);
+        });
 
         // <deklaracija>
 
-        //TODO nastavi
+        addRule("<deklaracija>", List.of(
+                "<ime_tipa>",
+                "<lista_init_deklaratora>",
+                "TOCKAZAREZ"
+        ), (node, checker, scope) -> {
+            Node ime_tipa = (Node) node.getChild(0);
+            Node lista_init_deklaratora = (Node) node.getChild(1);
 
+            checker.check(ime_tipa);
+            lista_init_deklaratora.setProperty("ntip", ime_tipa.getProperty("tip"));
+            checker.check(lista_init_deklaratora);
+        });
 
         // <lista_init_deklaratora>
 
-        //TODO nastavi
+        addRule("<lista_init_deklaratora>", List.of(
+                "<init_deklarator>"
+        ), (node, checker, scope) -> {
+            Node init_deklarator = (Node) node.getChild(0);
 
+            init_deklarator.setProperty("ntip", node.getProperty("ntip"));
+            checker.check(init_deklarator);
+        });
+
+        addRule("<lista_init_deklaratora>", List.of(
+                "<lista_init_deklaratora>",
+                "ZAREZ",
+                "<init_deklarator>"
+        ), (node, checker, scope) -> {
+            Node lista_init_deklaratora = (Node) node.getChild(0);
+            Node init_deklarator = (Node) node.getChild(2);
+
+            lista_init_deklaratora.setProperty("ntip", node.getProperty("ntip"));
+            init_deklarator.setProperty("ntip", node.getProperty("ntip"));
+
+            checker.check(lista_init_deklaratora);
+            checker.check(init_deklarator);
+        });
 
         // <init_deklarator>
 
-        //TODO nastavi
+        addRule("<init_deklarator>", List.of(
+                "<izravni_deklarator>"
+        ), (node, checker, scope) -> {
+            Node izravni_deklarator = (Node) node.getChild(0);
 
+            izravni_deklarator.setProperty("ntip", node.getProperty("ntip"));
+            checker.check(izravni_deklarator);
+
+            DataType tip = (DataType) izravni_deklarator.getProperty("tip");
+
+            if (tip instanceof NumericType && ((NumericType)tip).isConst()) throw new SemanticException();
+            if (tip instanceof ArrayType && ((ArrayType)tip).getNumericType().isConst()) throw new SemanticException();
+        });
+
+        addRule("<init_deklarator>", List.of(
+                "<izravni_deklarator>",
+                "OP_PRIDRUZI",
+                "<inicijalizator>"
+        ), (node, checker, scope) -> {
+            Node izravni_deklarator = (Node) node.getChild(0);
+            Node inicijalizator = (Node) node.getChild(2);
+
+            izravni_deklarator.setProperty("ntip", node.getProperty("ntip"));
+            checker.check(izravni_deklarator);
+            checker.check(inicijalizator);
+
+            DataType tip_dekl = (DataType) izravni_deklarator.getProperty("tip");
+            DataType tip_inic = (DataType) inicijalizator.getProperty("tip");
+
+            if (!(tip_dekl instanceof ArrayType)) {
+                if (!tip_inic.implicitlyCastableTo(tip_dekl)) throw new SemanticException();
+            } else {
+                int inic_br = (Integer) inicijalizator.getProperty("br-elem");
+                int dekl_br = (Integer) izravni_deklarator.getProperty("br-elem");
+                if (inic_br > dekl_br) throw new SemanticException();
+                ArrayType arrayType = (ArrayType) tip_dekl;
+                DataType T = arrayType.getNumericType();
+                List<DataType> tipovi = (List<DataType>) inicijalizator.getProperty("tipovi");
+                for (var tip: tipovi){
+                    if (!tip.implicitlyCastableTo(T)) throw new SemanticException();
+                }
+            }
+        });
 
         // <izravni_deklarator>
 
-        //TODO nastavi
+        addRule("<izravni_deklarator>", List.of(
+                "IDN"
+        ), (node, checker, scope) -> {
+            Leaf idn = (Leaf) node.getChild(0);
 
+            DataType tip = (DataType) node.getProperty("ntip");
+
+            node.setProperty("tip", tip);
+
+            if (tip == VOID) throw new SemanticException();
+            if (scope.variableIsDeclared(idn.getSourceText())) throw new SemanticException();
+
+            scope.declareVariable(new Variable(
+                    idn.getSourceText(),
+                    tip,
+                    tip instanceof NumericType && ((NumericType) tip).isConst(),
+                    tip instanceof ArrayType //uvijek false valjda idk
+            ));
+        });
+
+        addRule("<izravni_deklarator>", List.of(
+                "IDN",
+                "L_UGL_ZAGRADA",
+                "BROJ",
+                "D_UGL_ZAGRADA"
+        ), (node, checker, scope) -> {
+            Leaf idn = (Leaf) node.getChild(0);
+            Leaf broj = (Leaf) node.getChild(2);
+
+            DataType ntip = (DataType) node.getProperty("ntip");
+            ArrayType tip = ArrayType.of(ntip);
+
+            node.setProperty("tip", ArrayType.of(tip));
+
+            if (ntip == VOID) throw new SemanticException();
+            if (scope.variableIsDeclared(idn.getSourceText())) throw new SemanticException();
+
+            requireArraySize(broj.getSourceText());
+
+            scope.declareVariable(new Variable(
+                    idn.getSourceText(),
+                    tip,
+                    tip.getNumericType().isConst(),
+                    true
+            ));
+
+            node.setProperty("br-elem", Integer.valueOf(broj.getSourceText()));
+        });
+
+        addRule("<izravni_deklarator>", List.of(
+                "IDN",
+                "L_ZAGRADA",
+                "KR_VOID",
+                "D_ZAGRADA"
+        ), (node, checker, scope) -> {
+            Leaf idn = (Leaf) node.getChild(0);
+
+            DataType ntip = (DataType) node.getProperty("ntip");
+            FunctionType tip = new FunctionType(ntip);
+
+            if (scope.variableIsDeclared(idn.getSourceText()) &&
+                    !scope.getVariable(idn.getSourceText()).getType().equals(tip)) throw new SemanticException();
+
+            if (!scope.variableIsDeclared(idn.getSourceText()))
+                scope.declareVariable(new Variable(
+                        idn.getSourceText(),
+                        tip,
+                        false,
+                        false
+                ));
+
+            node.setProperty("tip", tip);
+        });
+
+        addRule("<izravni_deklarator>", List.of(
+                "IDN",
+                "L_ZAGRADA",
+                "<lista_parametara>",
+                "D_ZAGRADA"
+        ), (node, checker, scope) -> {
+            Leaf idn = (Leaf) node.getChild(0);
+            Node lista_parametara = (Node) node.getChild(2);
+
+            checker.check(lista_parametara);
+
+            DataType ntip = (DataType) node.getProperty("ntip");
+            List<DataType> tipovi = (List<DataType>) lista_parametara.getProperty("tipovi");
+
+            FunctionType tip = new FunctionType(ntip, tipovi.toArray(new DataType[0]));
+
+            if (scope.variableIsDeclared(idn.getSourceText()) &&
+                    !scope.getVariable(idn.getSourceText()).getType().equals(tip)) throw new SemanticException();
+
+            if (!scope.variableIsDeclared(idn.getSourceText()))
+                scope.declareVariable(new Variable(
+                        idn.getSourceText(),
+                        tip,
+                        false,
+                        false
+                ));
+
+            node.setProperty("tip", tip);
+        });
 
         // <inicijalizator>
 
-        //TODO nastavi
+        addRule("<inicijalizator>", List.of(
+                "<izraz_pridruzivanja>"
+        ), (node, checker, scope) -> {
+            Node izraz_pridruzivanja = (Node) node.getChild(0);
+            checker.check(izraz_pridruzivanja);
+
+            DataType tip = (DataType) izraz_pridruzivanja.getProperty("tip");
+            int charArraySize = TreeUtil.charArraySize(node);
+
+            if (charArraySize > 0) {
+                node.setProperty("br-elem", charArraySize + 1);
+                List<DataType> tipovi = new ArrayList<>();
+                for (int i = 0; i < charArraySize + 1; i++) tipovi.add(CHAR);
+                node.setProperty("tipovi", tipovi);
+            } else {
+                node.setProperty("tip", izraz_pridruzivanja.getProperty("tip"));
+            }
+
+        });
+
+        addRule("<inicijalizator>", List.of(
+                "L_VIT_ZAGRADA",
+                "<lista_izraza_pridruzivanja>",
+                "D_VIT_ZAGRADA"
+        ), (node, checker, scope) -> {
+            Node lista_izraza_pridruzivanja = (Node) node.getChild(0);
+            checker.check(lista_izraza_pridruzivanja);
+
+            node.setProperty("br-elem", lista_izraza_pridruzivanja.getProperty("br-elem"));
+            node.setProperty("tipovi", lista_izraza_pridruzivanja.getProperty("tipovi"));
+        });
 
         // <lista_izraza_pridruzivanja>
 
-        //TODO nastavi
+        addRule("<lista_izraza_pridruzivanja>", List.of(
+                "<izraz_pridruzivanja>"
+        ), (node, checker, scope) -> {
+            Node izraz_pridruzivanja = (Node) node.getChild(0);
+            checker.check(izraz_pridruzivanja);
+
+            List<DataType> tipovi = List.of((DataType) izraz_pridruzivanja.getProperty("tip"));
+            node.setProperty("tipovi", tipovi);
+            node.setProperty("br-elem", 1);
+        });
+
+        addRule("<lista_izraza_pridruzivanja>", List.of(
+                "<lista_izraza_pridruzivanja>",
+                "ZAREZ",
+                "<izraz_pridruzivanja>"
+        ), (node, checker, scope) -> {
+            Node lista_izraza_pridruzivanja = (Node) node.getChild(0);
+            Node izraz_pridruzivanja = (Node) node.getChild(2);
+
+            checker.check(lista_izraza_pridruzivanja);
+            checker.check(izraz_pridruzivanja);
+
+            List<DataType> tipovi = (List<DataType>) lista_izraza_pridruzivanja.getProperty("tipovi");
+            tipovi.add((DataType) izraz_pridruzivanja.getProperty("tip"));
+            int br = (Integer) lista_izraza_pridruzivanja.getProperty("br-elem");
+
+            node.setProperty("tipovi", tipovi);
+            node.setProperty("br-elem", br+1);
+        });
     }
 
 }

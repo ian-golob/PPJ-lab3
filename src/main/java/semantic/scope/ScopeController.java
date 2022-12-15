@@ -17,6 +17,8 @@ public class ScopeController {
 
     private Function currentFunction;
 
+    private int loopCounter = 0;
+
     public ScopeController(){
         currentVariableScope = new GlobalVariableScope();
     }
@@ -69,6 +71,18 @@ public class ScopeController {
 
     public Function getCurrentFunction() {
         return currentFunction;
+    }
+
+    public void enterLoop(){
+        loopCounter++;
+    }
+
+    public void exitLoop(){
+        loopCounter--;
+    }
+
+    public boolean inLoop(){
+        return loopCounter > 0;
     }
 
     public void defineFunction(Function function) throws SemanticException {
