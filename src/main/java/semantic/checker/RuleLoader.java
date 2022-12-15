@@ -48,9 +48,9 @@ public class RuleLoader {
         ), (node, checker, scope) -> {
             Leaf IDN = (Leaf) node.getChild(0);
 
-            scope.requireDeclaredVariable(IDN.getName());
+            scope.requireDeclaredVariable(IDN.getSourceText());
 
-            Variable idnVariable = scope.getVariable(IDN.getName());
+            Variable idnVariable = scope.getVariable(IDN.getSourceText());
 
             node.setProperty("tip", idnVariable.getType());
             node.setProperty("l-izraz", idnVariable.isLValue());
@@ -149,8 +149,10 @@ public class RuleLoader {
             checker.check(postfiks_izraz);
 
             FunctionType functionType = (FunctionType) postfiks_izraz.getProperty("tip");
+            List<DataType> functionParameters = functionType.getParameters();
 
-            if(functionType.getReturnType() != VOID){
+            if(!(functionParameters.size() == 0 ||
+                functionParameters.size() == 1 && functionParameters.get(0) == VOID)){
                 throw new SemanticException();
             }
 
@@ -1255,8 +1257,8 @@ public class RuleLoader {
 
             checker.check(deklaracija_parametra);
 
-            List<DataType> tipovi = List.of((DataType) deklaracija_parametra.getProperty("tip"));
-            List<String> imena = List.of((String) deklaracija_parametra.getProperty("ime"));
+            List<DataType> tipovi = new ArrayList<>(List.of((DataType) deklaracija_parametra.getProperty("tip")));
+            List<String> imena = new ArrayList<>(List.of((String) deklaracija_parametra.getProperty("ime")));
 
             node.setProperty("tipovi", tipovi);
             node.setProperty("imena", imena);
@@ -1411,19 +1413,34 @@ public class RuleLoader {
             DataType tip_dekl = (DataType) izravni_deklarator.getProperty("tip");
             DataType tip_inic = (DataType) inicijalizator.getProperty("tip");
 
-            if (!(tip_dekl instanceof ArrayType)) {
-                if (!tip_inic.implicitlyCastableTo(tip_dekl)) throw new SemanticException();
-            } else {
+            if(tip_dekl instanceof NumericType){
+
+                if(!tip_inic.implicitlyCastableTo(tip_dekl)) {
+                    throw new SemanticException();
+                }
+
+            } else if(tip_dekl instanceof ArrayType) {
+
                 int inic_br = (Integer) inicijalizator.getProperty("br-elem");
                 int dekl_br = (Integer) izravni_deklarator.getProperty("br-elem");
-                if (inic_br > dekl_br) throw new SemanticException();
+
+                if (inic_br > dekl_br) {
+                    throw new SemanticException();
+                }
+
                 ArrayType arrayType = (ArrayType) tip_dekl;
                 DataType T = arrayType.getNumericType();
                 List<DataType> tipovi = (List<DataType>) inicijalizator.getProperty("tipovi");
                 for (var tip: tipovi){
-                    if (!tip.implicitlyCastableTo(T)) throw new SemanticException();
+                    if (!tip.implicitlyCastableTo(T)){
+                        throw new SemanticException();
+                    }
                 }
+
+            } else {
+                throw new SemanticException();
             }
+
         });
 
         // <izravni_deklarator>
@@ -1574,7 +1591,8 @@ public class RuleLoader {
             Node izraz_pridruzivanja = (Node) node.getChild(0);
             checker.check(izraz_pridruzivanja);
 
-            List<DataType> tipovi = List.of((DataType) izraz_pridruzivanja.getProperty("tip"));
+            List<DataType> tipovi = new ArrayList<>();
+            tipovi.add((DataType) izraz_pridruzivanja.getProperty("tip"));
             node.setProperty("tipovi", tipovi);
             node.setProperty("br-elem", 1);
         });

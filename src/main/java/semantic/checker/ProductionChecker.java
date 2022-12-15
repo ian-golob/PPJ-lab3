@@ -43,13 +43,12 @@ public class ProductionChecker {
         List<String> childrenNames = node.getChildren().stream().map(TreeElement::getName).collect(Collectors.toList());
         Rule rule = getRule(node.getName(), childrenNames);
 
-
         try{
 
          rule.check(node, this, scope);
 
         } catch(SemanticException ex){
-            throw new SemanticFinishedException(node.toString());
+            throw new SemanticFinishedException(node.getProductionErrorString());
         }
     }
 

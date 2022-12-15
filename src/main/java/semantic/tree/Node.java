@@ -22,6 +22,10 @@ public class Node extends TreeElement{
 
     @Override
     public String toString() {
+        return this.getName();
+    }
+
+    public String getProductionErrorString() {
         return this.getName() + " ::= " +
                 children.stream().map(TreeElement::toString).collect(Collectors.joining(" "));
     }

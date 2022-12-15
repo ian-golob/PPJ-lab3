@@ -10,4 +10,5 @@ public interface VariableScope {
     void defineNewVariable(Variable variable) throws SemanticException;
 
     Variable getVariable(String variableName);
+
 }

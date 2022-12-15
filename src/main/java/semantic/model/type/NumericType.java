@@ -7,12 +7,15 @@ public abstract class NumericType extends DataType{
     public static final NumericType CHAR = new NumericType(false) {
         @Override
         public boolean implicitlyCastableTo(DataType dataType) {
-            return false;
+            return dataType == CHAR ||
+                    dataType == CONST_CHAR ||
+                    dataType == INT ||
+                    dataType == CONST_INT;
         }
 
         @Override
         public boolean explicitlyCastableTo(DataType dataType) {
-            return false;
+            return implicitlyCastableTo(dataType);
         }
     };
 

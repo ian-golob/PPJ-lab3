@@ -52,6 +52,7 @@ public class ScopeController {
     }
 
     public void declareFunction(Function function) throws SemanticException {
+
         if(declaredFunctions.containsKey(function.getName())){
             throw new SemanticException("Function already declared.");
         }
@@ -63,10 +64,13 @@ public class ScopeController {
         declareFunction(function);
 
         currentFunction = function;
+
+        defineNewScope();
     }
 
     public void endFunctionDeclaration() {
         currentFunction = null;
+        exitLastScope();
     }
 
     public Function getCurrentFunction() {
