@@ -8,17 +8,16 @@ import semantic.model.type.FunctionType;
 import semantic.model.type.NumericType;
 import semantic.model.util.TreeUtil;
 import semantic.model.variable.Variable;
+import semantic.scope.ScopeElement;
 import semantic.tree.Leaf;
 import semantic.tree.Node;
 
-import javax.xml.crypto.Data;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static semantic.model.type.NumericType.*;
-import static semantic.model.type.ArrayType.*;
 import static semantic.model.util.ConstantUtil.*;
 
 public class RuleLoader {
@@ -48,12 +47,12 @@ public class RuleLoader {
         ), (node, checker, scope) -> {
             Leaf IDN = (Leaf) node.getChild(0);
 
-            scope.requireDeclaredVariable(IDN.getSourceText());
+            scope.requireDeclared(IDN.getSourceText());
 
-            Variable idnVariable = scope.getVariable(IDN.getSourceText());
+            ScopeElement idn = scope.get(IDN.getSourceText());
 
-            node.setProperty("tip", idnVariable.getType());
-            node.setProperty("l-izraz", idnVariable.isLValue());
+            node.setProperty("tip", idn.getType());
+            node.setProperty("l-izraz", idn.isLValue());
         });
 
         addRule("<primarni_izraz>", List.of(
@@ -135,8 +134,11 @@ public class RuleLoader {
                 throw new SemanticException();
             }
 
+            DataType postfiks_izraz_tip = (DataType) postfiks_izraz.getProperty("tip");
+
             node.setProperty("tip", ((ArrayType) postfiks_izraz.getProperty("tip")).getNumericType());
-            node.setProperty("l-izraz", !((NumericType) postfiks_izraz.getProperty("tip")).isConst());
+            node.setProperty("l-izraz", !(postfiks_izraz_tip instanceof NumericType &&
+                    ((NumericType) postfiks_izraz_tip).isConst()));
         });
 
         addRule("<postfiks_izraz>", List.of(
@@ -173,11 +175,26 @@ public class RuleLoader {
             checker.check(postfiks_izraz);
             checker.check(lista_argumenata);
 
+            if(!(postfiks_izraz.getProperty("tip") instanceof FunctionType)){
+                throw new SemanticException();
+            }
+
             FunctionType functionType = (FunctionType) postfiks_izraz.getProperty("tip");
 
-            if (functionType.getParameters().size() != ((List<DataType>) lista_argumenata.getProperty("tipovi")).size()) throw new SemanticException();
-            for (int i = 0; i < functionType.getParameters().size(); i++){
-                if (!functionType.getParameters().get(i).implicitlyCastableTo(((List<DataType>) lista_argumenata.getProperty("tipovi")).get(i))) throw new SemanticException();
+            List<DataType> tipovi = (List<DataType>) lista_argumenata.getProperty("tipovi");
+
+            if(tipovi.size() != functionType.getParameters().size()){
+                throw new SemanticException();
+            }
+
+            for (int i = 0; i < tipovi.size(); i++){
+                DataType argTip = tipovi.get(i);
+                DataType paramTip = functionType.getParameters().get(i);
+
+                if(!argTip.implicitlyCastableTo(paramTip)){
+                    throw new SemanticException();
+                }
+
             }
 
             node.setProperty("tip", functionType.getReturnType());
@@ -222,7 +239,8 @@ public class RuleLoader {
             Node izraz_pridruzivanja = (Node) node.getChild(0);
             checker.check(izraz_pridruzivanja);
 
-            List<DataType> tipovi = List.of((DataType) izraz_pridruzivanja.getProperty("tip"));
+            List<DataType> tipovi = new ArrayList<>();
+            tipovi.add((DataType) izraz_pridruzivanja.getProperty("tip"));
 
             node.setProperty("tipovi", tipovi);
 
@@ -881,7 +899,11 @@ public class RuleLoader {
         ), (node, checker, scope) -> {
             Node lista_naredbi = (Node) node.getChild(1);
 
+            scope.defineNewScope();
+
             checker.check(lista_naredbi);
+
+            scope.exitLastScope();
         });
 
         addRule("<slozena_naredba>", List.of(
@@ -893,8 +915,12 @@ public class RuleLoader {
             Node lista_deklaracija = (Node) node.getChild(1);
             Node lista_naredbi = (Node) node.getChild(2);
 
+            scope.defineNewScope();
+
             checker.check(lista_deklaracija);
             checker.check(lista_naredbi);
+
+            scope.exitLastScope();
         });
 
         // <lista_naredbi>
@@ -1185,13 +1211,13 @@ public class RuleLoader {
                 throw new SemanticException();
             }
 
-            if(scope.getDefinedFunction(IDN.getSourceText()) != null){
+            if(scope.functionIsDefined(IDN.getSourceText())){
                 throw new SemanticException();
             }
 
             FunctionType functionType = new FunctionType((DataType) ime_tipa.getProperty("tip"));
 
-            Function declaredFunction = scope.getDeclaredFunction(IDN.getName());
+            Function declaredFunction = scope.getFunction(IDN.getSourceText());
             if(declaredFunction != null){
                 if(!declaredFunction.getFunctionType().equals(functionType)){
                     throw new SemanticException();
@@ -1219,29 +1245,39 @@ public class RuleLoader {
             Node slozena_naredba = (Node) node.getChild(5);
 
             checker.check(ime_tipa);
-            checker.check(lista_parametara);
 
             //TODO provjeri ovo nema smisla Iane pls
             if(NumericType.isConst((DataType) ime_tipa.getProperty("tip"))){
                 throw new SemanticException();
             }
 
-            if(scope.getDefinedFunction(IDN.getSourceText()) != null){
-                throw new SemanticException();
-            }
+            checker.check(lista_parametara);
 
-            List<DataType> lista_tipova = (List<DataType>) lista_parametara.getProperty("tipovi");
+            if(scope.isDeclaredGlobally(IDN.getSourceText())){
+                Function declaredFunction = scope.getGloballyDeclaredFunction(IDN.getSourceText());
 
-            FunctionType functionType = new FunctionType((DataType) ime_tipa.getProperty("tip"), lista_tipova.toArray(new DataType[0]));
-
-            Function declaredFunction = scope.getDeclaredFunction(IDN.getName());
-            if(declaredFunction != null){
-                if(!declaredFunction.getFunctionType().equals(functionType)){
+                if(!declaredFunction.getReturnType().equals(
+                        new FunctionType((DataType) ime_tipa.getProperty("tip"),
+                                (DataType) lista_parametara.getProperty("tipovi")))){
                     throw new SemanticException();
                 }
+
             }
 
+
+            List<DataType> lista_tipova = (List<DataType>) lista_parametara.getProperty("tipovi");
+            List<String> lista_imena_tipova = (List<String>) lista_parametara.getProperty("imena");
+            FunctionType functionType = new FunctionType((DataType) ime_tipa.getProperty("tip"), lista_tipova.toArray(new DataType[0]));
+
             scope.startFunctionDeclaration(new Function(IDN.getSourceText(), functionType));
+
+            for(int i = 0; i < lista_tipova.size(); i++){
+                scope.declareVariable(new Variable(lista_imena_tipova.get(i),
+                        lista_tipova.get(i),
+                        false,
+                        false
+                ));
+            }
 
             checker.check(slozena_naredba);
 
@@ -1257,8 +1293,10 @@ public class RuleLoader {
 
             checker.check(deklaracija_parametra);
 
-            List<DataType> tipovi = new ArrayList<>(List.of((DataType) deklaracija_parametra.getProperty("tip")));
-            List<String> imena = new ArrayList<>(List.of((String) deklaracija_parametra.getProperty("ime")));
+            List<DataType> tipovi = new ArrayList<>();
+            tipovi.add((DataType) deklaracija_parametra.getProperty("tip"));
+            List<String> imena = new ArrayList<>();
+            imena.add((String) deklaracija_parametra.getProperty("ime"));
 
             node.setProperty("tipovi", tipovi);
             node.setProperty("imena", imena);
@@ -1477,7 +1515,7 @@ public class RuleLoader {
             DataType ntip = (DataType) node.getProperty("ntip");
             ArrayType tip = ArrayType.of(ntip);
 
-            node.setProperty("tip", ArrayType.of(tip));
+            node.setProperty("tip", tip);
 
             if (ntip == VOID) throw new SemanticException();
             if (scope.variableIsDeclared(idn.getSourceText())) throw new SemanticException();
@@ -1505,16 +1543,14 @@ public class RuleLoader {
             DataType ntip = (DataType) node.getProperty("ntip");
             FunctionType tip = new FunctionType(ntip);
 
-            if (scope.variableIsDeclared(idn.getSourceText()) &&
-                    !scope.getVariable(idn.getSourceText()).getType().equals(tip)) throw new SemanticException();
+            if (scope.functionIsDeclared(idn.getSourceText()) &&
+                    !scope.getFunction(idn.getSourceText()).getReturnType().equals(tip)){
+                throw new SemanticException();
+            }
 
-            if (!scope.variableIsDeclared(idn.getSourceText()))
-                scope.declareVariable(new Variable(
-                        idn.getSourceText(),
-                        tip,
-                        false,
-                        false
-                ));
+            if (!scope.functionIsDeclared(idn.getSourceText())){
+                scope.declareFunction(new Function(idn.getSourceText(), tip));
+            }
 
             node.setProperty("tip", tip);
         });
@@ -1535,16 +1571,14 @@ public class RuleLoader {
 
             FunctionType tip = new FunctionType(ntip, tipovi.toArray(new DataType[0]));
 
-            if (scope.variableIsDeclared(idn.getSourceText()) &&
-                    !scope.getVariable(idn.getSourceText()).getType().equals(tip)) throw new SemanticException();
+            if (scope.functionIsDeclaredLocally(idn.getSourceText()) &&
+                    !scope.getFunction(idn.getSourceText()).getReturnType().equals(tip)){
+                throw new SemanticException();
+            }
 
-            if (!scope.variableIsDeclared(idn.getSourceText()))
-                scope.declareVariable(new Variable(
-                        idn.getSourceText(),
-                        tip,
-                        false,
-                        false
-                ));
+            if (!scope.functionIsDeclaredLocally(idn.getSourceText())){
+                scope.declareFunction(new Function(idn.getSourceText(), tip));
+            }
 
             node.setProperty("tip", tip);
         });
@@ -1576,7 +1610,7 @@ public class RuleLoader {
                 "<lista_izraza_pridruzivanja>",
                 "D_VIT_ZAGRADA"
         ), (node, checker, scope) -> {
-            Node lista_izraza_pridruzivanja = (Node) node.getChild(0);
+            Node lista_izraza_pridruzivanja = (Node) node.getChild(1);
             checker.check(lista_izraza_pridruzivanja);
 
             node.setProperty("br-elem", lista_izraza_pridruzivanja.getProperty("br-elem"));

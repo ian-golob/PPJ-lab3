@@ -26,10 +26,18 @@ public class ConstantUtil {
 
     public static void requireValidString(String value) throws SemanticException
     {
-        int ln = value.length();
-        if (ln < 4 || value.charAt(ln-2) != '0' || value.charAt(ln-3) != '\\') throw new SemanticException();
-        for (int i = 0; i < ln; i++){
-            if (value.charAt(i) == '\\' && !Set.of('t','n','0','\'','\"','\\').contains(value.charAt(i+1))) throw new SemanticException();
+        if(value.length() < 2 ||
+                value.charAt(0) != '\"' ||
+                value.charAt(value.length()-1) != '\"'){
+            throw new SemanticException();
+        }
+
+        for (int i = 1; i < value.length()-1; i++){
+            if (value.charAt(i) == '\\' && !Set.of('t','n','0','\'','\"','\\').contains(value.charAt(i+1))){
+                throw new SemanticException();
+            } else {
+                i++;
+            }
         }
     }
 

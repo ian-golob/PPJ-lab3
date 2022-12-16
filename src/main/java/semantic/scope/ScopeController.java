@@ -4,16 +4,9 @@ import semantic.SemanticException;
 import semantic.model.function.Function;
 import semantic.model.variable.Variable;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class ScopeController {
 
     private VariableScope currentVariableScope;
-
-    private final Map<String, Function> definedFunctions = new HashMap<>();
-
-    private final Map<String, Function> declaredFunctions = new HashMap<>();
 
     private Function currentFunction;
 
@@ -35,14 +28,22 @@ public class ScopeController {
         currentVariableScope.defineNewVariable(variable);
     }
 
-    public Variable getVariable(String variableName) {
+    public Variable getVariable(String variableName) throws SemanticException {
         return currentVariableScope.getVariable(variableName);
     }
 
-    public boolean variableIsDeclared(String variableName){
+    public boolean variableIsDeclared(String variableName) throws SemanticException {
         Variable variable = getVariable(variableName);
 
         return variable != null;
+    }
+
+    public boolean isDeclaredGlobally(String functionName) {
+        return currentVariableScope.isDeclaredGlobally(functionName);
+    }
+
+    public Function getGloballyDeclaredFunction(String functionName) throws SemanticException {
+        return currentVariableScope.getGloballyDeclaredFunction(functionName);
     }
 
     public void requireDeclaredVariable(String variableName) throws SemanticException{
@@ -52,12 +53,7 @@ public class ScopeController {
     }
 
     public void declareFunction(Function function) throws SemanticException {
-
-        if(declaredFunctions.containsKey(function.getName())){
-            throw new SemanticException("Function already declared.");
-        }
-
-        declaredFunctions.put(function.getName(), function);
+        currentVariableScope.declareNewFunction(function);
     }
 
     public void startFunctionDeclaration(Function function) throws SemanticException {
@@ -89,29 +85,34 @@ public class ScopeController {
         return loopCounter > 0;
     }
 
-    public void defineFunction(Function function) throws SemanticException {
-        if(definedFunctions.containsKey(function.getName())){
-            throw new SemanticException("Function already defined.");
+
+    public void requireDeclared(String sourceText) throws SemanticException {
+        if(!currentVariableScope.isDeclared(sourceText)) {
+            throw new SemanticException();
         }
-
-        if(declaredFunctions.containsKey(function.getName())){
-            Function declaredFunction = declaredFunctions.get(function.getName());
-
-            if(!declaredFunction.matchesSignatureOf(function)){
-                throw new SemanticException("Function declaration and definition signatures do not match.");
-            }
-        }
-
-        declaredFunctions.put(function.getName(), function);
-        definedFunctions.put(function.getName(), function);
     }
 
-    public Function getDefinedFunction(String functionName) {
-        return definedFunctions.get(functionName);
+    public boolean functionIsDeclared(String functionName) throws SemanticException {
+        Function function = currentVariableScope.getFunction(functionName);
+
+        return function != null;
     }
 
-    public Function getDeclaredFunction(String functionName) {
-        return definedFunctions.get(functionName);
+    public boolean functionIsDefined(String functionName) throws SemanticException {
+        Function function = currentVariableScope.getFunction(functionName);
+
+        return function != null && function.isDefined();
     }
 
+    public Function getFunction(String functionName) throws SemanticException {
+        return currentVariableScope.getFunction(functionName);
+    }
+
+    public ScopeElement get(String name){
+        return currentVariableScope.get(name);
+    }
+
+    public boolean functionIsDeclaredLocally(String functionName) {
+        return currentVariableScope.functionIsDeclaredLocally(functionName);
+    }
 }

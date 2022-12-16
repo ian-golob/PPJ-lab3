@@ -1,6 +1,7 @@
 package semantic.scope;
 
 import semantic.SemanticException;
+import semantic.model.function.Function;
 import semantic.model.variable.Variable;
 
 import java.util.HashMap;
@@ -8,7 +9,7 @@ import java.util.Map;
 
 public class LocalVariableScope implements VariableScope {
 
-    private final Map<String, Variable> variableMap = new HashMap<>();
+    private final Map<String, ScopeElement> valueMap = new HashMap<>();
 
     private final VariableScope outerScope;
 
@@ -23,19 +24,95 @@ public class LocalVariableScope implements VariableScope {
 
     @Override
     public void defineNewVariable(Variable variable) throws SemanticException {
-        if(variableMap.containsKey(variable.getName())){
-            throw new SemanticException("Variable already defined in this scope");
+        Object o = valueMap.get(variable.getName());
+
+        if(o!= null){
+            throw new SemanticException();
         }
 
-        variableMap.put(variable.getName(), variable);
+        valueMap.put(variable.getName(), variable);
     }
 
     @Override
-    public Variable getVariable(String variableName) {
-        if(variableMap.containsKey(variableName)){
-            return variableMap.get(variableName);
+    public void declareNewFunction(Function function) throws SemanticException {
+        Object o = valueMap.get(function.getName());
+
+        if(o != null){
+            throw new SemanticException();
         }
 
-        return outerScope.getVariable(variableName);
+        valueMap.put(function.getName(), function);
+    }
+
+    @Override
+    public Variable getVariable(String variableName) throws SemanticException {
+        Object o = valueMap.get(variableName);
+
+        if(o == null){
+            return outerScope.getVariable(variableName);
+        }
+
+        if(!(o instanceof Variable)){
+            throw new SemanticException();
+        }
+
+        return (Variable) o;
+    }
+
+    @Override
+    public Function getFunction(String functionName) throws SemanticException {
+        Object o = valueMap.get(functionName);
+
+        if(o == null){
+            return outerScope.getFunction(functionName);
+        }
+
+        if(!(o instanceof Function)){
+            throw new SemanticException();
+        }
+
+        return (Function) o;
+    }
+
+    @Override
+    public boolean isDeclared(String sourceText) {
+        return valueMap.containsKey(sourceText) || outerScope.isDeclared(sourceText);
+    }
+
+    @Override
+    public ScopeElement get(String name) {
+        if(valueMap.containsKey(name)){
+            return valueMap.get(name);
+        }
+        return outerScope.get(name);
+    }
+
+    @Override
+    public boolean functionIsDeclaredLocally(String functionName) {
+        return valueMap.containsKey(functionName) && valueMap.get(functionName) instanceof Function;
+    }
+
+    @Override
+    public boolean isDeclaredGlobally(String functionName) {
+        return outerScope.isDeclaredGlobally(functionName);
+    }
+
+    @Override
+    public Function getGloballyDeclaredFunction(String functionName) throws SemanticException {
+        return outerScope.getGloballyDeclaredFunction(functionName);
+    }
+
+    public void defineFunction(Function function) throws SemanticException {
+        Object o = valueMap.get(function.getName());
+
+        if( o!= null && (
+                !(o instanceof Function) ||
+                ((Function) o).isDefined() ||
+                !((Function) o).matchesSignatureOf(function))){
+            throw new SemanticException();
+        }
+
+        function.define();
+        valueMap.put(function.getName(), function);
     }
 }

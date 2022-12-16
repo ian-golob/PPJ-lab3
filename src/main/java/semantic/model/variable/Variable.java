@@ -3,10 +3,11 @@ package semantic.model.variable;
 import semantic.SemanticException;
 import semantic.model.type.DataType;
 import semantic.model.type.NumericType;
+import semantic.scope.ScopeElement;
 
 import java.util.Objects;
 
-public class Variable {
+public class Variable implements ScopeElement {
 
     private final String name;
 
@@ -33,6 +34,7 @@ public class Variable {
         return name;
     }
 
+    @Override
     public DataType getType() {
         return type;
     }
@@ -45,7 +47,7 @@ public class Variable {
         return isArray;
     }
 
-    public boolean isLValue(){
+    public Boolean isLValue(){
         return type == NumericType.CHAR || type == NumericType.INT;
     }
 }

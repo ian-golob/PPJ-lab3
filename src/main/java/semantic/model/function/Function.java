@@ -3,11 +3,12 @@ package semantic.model.function;
 import semantic.SemanticException;
 import semantic.model.type.DataType;
 import semantic.model.type.FunctionType;
+import semantic.scope.ScopeElement;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class Function {
+public class Function implements ScopeElement {
 
     private final String name;
 
@@ -16,6 +17,8 @@ public class Function {
     private final List<DataType> parameters;
 
     private final FunctionType functionType;
+
+    private boolean isDefined = false;
 
     private final boolean voidParameters;
 
@@ -93,5 +96,23 @@ public class Function {
         }
 
         return true;
+    }
+
+    public void define(){
+        isDefined = true;
+    }
+
+    public boolean isDefined(){
+        return isDefined;
+    }
+
+    @Override
+    public DataType getType() {
+        return functionType;
+    }
+
+    @Override
+    public Boolean isLValue() {
+        return false;
     }
 }
