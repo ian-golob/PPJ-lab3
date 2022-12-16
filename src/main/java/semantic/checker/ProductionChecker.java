@@ -2,6 +2,10 @@ package semantic.checker;
 
 import semantic.SemanticException;
 import semantic.SemanticFinishedException;
+import semantic.model.function.Function;
+import semantic.model.type.DataType;
+import semantic.model.type.FunctionType;
+import semantic.model.type.NumericType;
 import semantic.scope.ScopeController;
 import semantic.tree.Node;
 import semantic.tree.TreeElement;
@@ -58,7 +62,30 @@ public class ProductionChecker {
         try{
             check(root);
 
-            //TODO one dve provjere nakon obilaska stabla
+            // provjera main
+            try {
+                FunctionType mainType = new FunctionType(NumericType.INT, DataType.VOID);
+                if(!(scope.functionIsDefined("main") &&
+                        scope.getGloballyDeclaredFunction("main")
+                                .getFunctionType().equals(mainType))){
+                    throw new SemanticException();
+                }
+            } catch (SemanticException e) {
+                throw new SemanticFinishedException("main");
+            }
+
+            // provjera funkcija
+            try {
+                for(Function function: scope.getFunctionHistory()){
+                    if(!function.isDefined()){
+                        throw new SemanticException();
+                    }
+                }
+            } catch (SemanticException e) {
+                throw new SemanticFinishedException("funkcija");
+            }
+
+
         } catch (SemanticFinishedException ex){
             out.println(ex.getMessage());
         }

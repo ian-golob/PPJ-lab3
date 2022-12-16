@@ -210,7 +210,7 @@ public class RuleLoader {
             checker.check(postfiks_izraz);
 
             if (!(Boolean) postfiks_izraz.getProperty("l-izraz").equals(Boolean.TRUE)) throw new SemanticException();
-            if ((DataType) postfiks_izraz.getProperty("tip") != INT) throw new SemanticException();
+            if (postfiks_izraz.getProperty("tip") != INT) throw new SemanticException();
 
             node.setProperty("tip", INT);
             node.setProperty("l-izraz", Boolean.FALSE);
@@ -225,7 +225,7 @@ public class RuleLoader {
             checker.check(postfiks_izraz);
 
             if (!(Boolean) postfiks_izraz.getProperty("l-izraz").equals(Boolean.TRUE)) throw new SemanticException();
-            if ((DataType) postfiks_izraz.getProperty("tip") != INT) throw new SemanticException();
+            if (postfiks_izraz.getProperty("tip") != INT) throw new SemanticException();
 
             node.setProperty("tip", INT);
             node.setProperty("l-izraz", Boolean.FALSE);
@@ -285,7 +285,7 @@ public class RuleLoader {
 
             checker.check(unarni_izraz);
 
-            if ((Boolean) unarni_izraz.getProperty("l-izraz").equals(Boolean.FALSE)
+            if (unarni_izraz.getProperty("l-izraz").equals(Boolean.FALSE)
                     || !((DataType) unarni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
 
             node.setProperty("tip", INT);
@@ -300,7 +300,7 @@ public class RuleLoader {
 
             checker.check(unarni_izraz);
 
-            if ((Boolean) unarni_izraz.getProperty("l-izraz").equals(Boolean.FALSE)
+            if (unarni_izraz.getProperty("l-izraz").equals(Boolean.FALSE)
                     || !((DataType) unarni_izraz.getProperty("tip")).implicitlyCastableTo(INT)) throw new SemanticException();
 
             node.setProperty("tip", INT);
@@ -398,7 +398,7 @@ public class RuleLoader {
 
             checker.check(specifikator_tipa);
 
-            if ((DataType) specifikator_tipa.getProperty("tip") == VOID) throw new SemanticException();
+            if (specifikator_tipa.getProperty("tip") == VOID) throw new SemanticException();
 
             node.setProperty("tip", constOf((DataType) specifikator_tipa.getProperty("tip")));
         });
@@ -854,7 +854,7 @@ public class RuleLoader {
             checker.check(postfiks_izraz);
             checker.check(izraz_pridruzivanja);
 
-            if (!((Boolean)postfiks_izraz.getProperty("l-izraz")).equals(Boolean.TRUE) ||
+            if (!postfiks_izraz.getProperty("l-izraz").equals(Boolean.TRUE) ||
                     !((DataType)izraz_pridruzivanja.getProperty("tip"))
                             .implicitlyCastableTo((DataType)postfiks_izraz.getProperty("tip"))) throw new SemanticException();
 
@@ -1224,11 +1224,11 @@ public class RuleLoader {
                 }
             }
 
-            scope.startFunctionDeclaration(new Function(IDN.getSourceText(), functionType));
+            scope.startFunctionDefinition(new Function(IDN.getSourceText(), functionType));
 
             checker.check(slozena_naredba);
 
-            scope.endFunctionDeclaration();
+            scope.endFunctionDefinition();
         });
 
         addRule("<definicija_funkcije>", List.of(
@@ -1269,7 +1269,7 @@ public class RuleLoader {
             List<String> lista_imena_tipova = (List<String>) lista_parametara.getProperty("imena");
             FunctionType functionType = new FunctionType((DataType) ime_tipa.getProperty("tip"), lista_tipova.toArray(new DataType[0]));
 
-            scope.startFunctionDeclaration(new Function(IDN.getSourceText(), functionType));
+            scope.startFunctionDefinition(new Function(IDN.getSourceText(), functionType));
 
             for(int i = 0; i < lista_tipova.size(); i++){
                 scope.declareVariable(new Variable(lista_imena_tipova.get(i),
@@ -1281,7 +1281,7 @@ public class RuleLoader {
 
             checker.check(slozena_naredba);
 
-            scope.endFunctionDeclaration();
+            scope.endFunctionDefinition();
         });
 
         // <lista_parametara>
@@ -1335,7 +1335,7 @@ public class RuleLoader {
 
             checker.check(ime_tipa);
 
-            if ((DataType) ime_tipa.getProperty("tip") == VOID) throw new SemanticException();
+            if (ime_tipa.getProperty("tip") == VOID) throw new SemanticException();
 
             node.setProperty("tip", ime_tipa.getProperty("tip"));
             node.setProperty("ime", idn.getSourceText());
@@ -1352,7 +1352,7 @@ public class RuleLoader {
 
             checker.check(ime_tipa);
 
-            if ((DataType) ime_tipa.getProperty("tip") == VOID) throw new SemanticException();
+            if (ime_tipa.getProperty("tip") == VOID) throw new SemanticException();
 
             node.setProperty("tip", ArrayType.of((DataType) ime_tipa.getProperty("tip")));
             node.setProperty("ime", idn.getSourceText());
@@ -1591,7 +1591,6 @@ public class RuleLoader {
             Node izraz_pridruzivanja = (Node) node.getChild(0);
             checker.check(izraz_pridruzivanja);
 
-            DataType tip = (DataType) izraz_pridruzivanja.getProperty("tip");
             int charArraySize = TreeUtil.charArraySize(node);
 
             if (charArraySize > 0) {

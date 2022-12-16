@@ -4,7 +4,12 @@ import semantic.SemanticException;
 import semantic.model.function.Function;
 import semantic.model.variable.Variable;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ScopeController {
+
+    private final List<Function> functionHistory = new ArrayList<>();
 
     private VariableScope currentVariableScope;
 
@@ -53,18 +58,25 @@ public class ScopeController {
     }
 
     public void declareFunction(Function function) throws SemanticException {
+        functionHistory.add(function);
         currentVariableScope.declareNewFunction(function);
     }
 
-    public void startFunctionDeclaration(Function function) throws SemanticException {
-        declareFunction(function);
+    public List<Function> getFunctionHistory() {
+        return functionHistory;
+    }
+
+    public void startFunctionDefinition(Function function) throws SemanticException {
+        currentVariableScope.declareNewFunction(function);
+        function.define();
+        functionHistory.add(function);
 
         currentFunction = function;
 
         defineNewScope();
     }
 
-    public void endFunctionDeclaration() {
+    public void endFunctionDefinition() {
         currentFunction = null;
         exitLastScope();
     }
