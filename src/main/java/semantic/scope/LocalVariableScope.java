@@ -102,6 +102,7 @@ public class LocalVariableScope implements VariableScope {
         return outerScope.getGloballyDeclaredFunction(functionName);
     }
 
+    /*
     public void defineFunction(Function function) throws SemanticException {
         Object o = valueMap.get(function.getName());
 
@@ -115,4 +116,6 @@ public class LocalVariableScope implements VariableScope {
         function.define();
         valueMap.put(function.getName(), function);
     }
+
+     */
 }

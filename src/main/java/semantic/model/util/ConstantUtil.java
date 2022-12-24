@@ -5,8 +5,6 @@ import semantic.SemanticException;
 import java.util.Set;
 
 public class ConstantUtil {
-    //TODO
-
 
     public static void requireIntValue(String value) throws SemanticException {
         try {
@@ -43,7 +41,7 @@ public class ConstantUtil {
 
     public static void requireArraySize(String value) throws SemanticException {
         try {
-            if (Integer.valueOf(value) < 1 || Integer.valueOf(value) > 1024) throw new SemanticException();
+            if (Integer.parseInt(value) < 1 || Integer.parseInt(value) > 1024) throw new SemanticException();
         } catch (IllegalArgumentException ex){
             throw new SemanticException();
         }

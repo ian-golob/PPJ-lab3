@@ -49,6 +49,7 @@ public class SemantickiAnalizator {
         return new Leaf(null, s.substring(0, firstSpace), Integer.parseInt(s.substring(firstSpace + 1, secondSpace)), s.substring(secondSpace + 1));
     }
 
+    /*
     private void printTree(PrintStream out, TreeElement node){
         out.println(node.getName());
         if (!node.isLeaf()){
@@ -62,6 +63,7 @@ public class SemantickiAnalizator {
             }
         }
     }
+     */
 
     private Node parseInput(InputStream in){
         List<String> inputLines = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8)).lines().collect(Collectors.toList());
@@ -95,7 +97,6 @@ public class SemantickiAnalizator {
     }
 
     public void analyzeInput() {
-
 
         Node root = parseInput(in);
         //printTree(out, root);
